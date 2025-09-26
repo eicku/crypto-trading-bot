@@ -31,3 +31,6 @@ Run with custom params:
 
 Backtest summary:
 `python backtest.py`
+
+## Config via .env
+Copy `.env.example` to `.env` and adjust values. CLI args override .env defaults.
