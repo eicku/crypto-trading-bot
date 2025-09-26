@@ -32,5 +32,9 @@ Run with custom params:
 Backtest summary:
 `python backtest.py`
 
+## Multi-scan
+Run a multi-symbol scan and generate `scan_results.csv` + `report.md`:
+`python scan.py`
+
 ## Config via .env
 Copy `.env.example` to `.env` and adjust values. CLI args override .env defaults.
