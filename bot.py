@@ -105,6 +105,12 @@ def run(symbol=None, timeframe=None, limit=None, fast=None, slow=None, start_usd
             wait = cooldown
 
     last_price = float(df["close"].iloc[-1])
+    # optionally close any open position at last bar
+    last_ts = df["ts"].iloc[-1]
+    if getattr(cfg, "CLOSE_AT_END", False) and broker.asset > 0:
+        broker.sell_all(last_price, last_ts)
+        logging.info(f"EOD CLOSE at {last_price:.2f}")
+
     final_equity = broker.equity(last_price)
     trades = pd.DataFrame(broker.trades)
     if not trades.empty:

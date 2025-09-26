@@ -29,3 +29,5 @@ RSI_LONG = int(os.getenv("RSI_LONG", "55"))
 RSI_EXIT = int(os.getenv("RSI_EXIT", "45"))
 
 TRAILING_STOP_PCT = float(os.getenv("TRAILING_STOP_PCT", "0.0"))
+
+CLOSE_AT_END = os.getenv("CLOSE_AT_END", "0").lower() in ("1","true","yes")
