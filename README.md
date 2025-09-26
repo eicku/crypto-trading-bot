@@ -51,3 +51,9 @@ vbnet
 Kopírovať kód
 ## Trailing stop
 Set `TRAILING_STOP_PCT` (e.g., 0.02 = 2%). While in a position the bot tracks the highest price since entry and exits when price drops by that percentage from the peak.
+
+pgsql
+Kopírovať kód
+## Close at end + trade report
+Set `CLOSE_AT_END=1` to force-closing any open position at the last candle.
+Run `python analyze_trades.py` to generate `trades_report.csv` and a console summary.
