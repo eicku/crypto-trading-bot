@@ -1,7 +1,15 @@
-print("Ahoj, toto je môj prvý trading bot v Kodexe!")
 
+from typing import Optional
 
 def hello() -> None:
-    """Print a greeting from Kodex."""
+    """Simple hello used to confirm the scaffold works."""
+    print("Hello from scaffold!")
 
-    print("Hello from Kodex!")
+def main() -> None:
+    print("Booting crypto-trading-bot scaffold…")
+    hello()
+    print("OK – ready for data/strategy/broker wiring.")
+
+if __name__ == "__main__":
+    main()
+ main
