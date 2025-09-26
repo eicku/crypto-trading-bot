@@ -35,6 +35,20 @@ def run(symbol=None, timeframe=None, limit=None, fast=None, slow=None, start_usd
             df, fast, slow, hysteresis_pct=getattr(cfg, "HYSTERESIS_PCT", 0.0)
         )
     broker = PaperBroker(starting_usd=start_usd)
+    try:
+        if getattr(cfg, "BROKER", "paper").lower() == "binance_testnet":
+            from live_broker_binance import BinanceTestnetBroker
+
+            broker = BinanceTestnetBroker(
+                api_key=getattr(cfg, "BINANCE_API_KEY", ""),
+                api_secret=getattr(cfg, "BINANCE_API_SECRET", ""),
+                symbol=symbol,
+                fee=0.0005,
+                testnet=True,
+            )
+            logging.info("Using BINANCE SPOT TESTNET broker")
+    except Exception as e:
+        logging.warning(f"Falling back to PaperBroker: {e}")
 
     prev = 0
     entry_price = None

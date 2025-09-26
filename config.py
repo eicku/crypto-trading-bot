@@ -31,3 +31,5 @@ RSI_EXIT = int(os.getenv("RSI_EXIT", "45"))
 TRAILING_STOP_PCT = float(os.getenv("TRAILING_STOP_PCT", "0.0"))
 
 CLOSE_AT_END = os.getenv("CLOSE_AT_END", "0").lower() in ("1","true","yes")
+
+BROKER = os.getenv("BROKER", "paper").lower()

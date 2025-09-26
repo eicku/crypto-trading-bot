@@ -57,3 +57,10 @@ Kopírovať kód
 ## Close at end + trade report
 Set `CLOSE_AT_END=1` to force-closing any open position at the last candle.
 Run `python analyze_trades.py` to generate `trades_report.csv` and a console summary.
+
+## Binance Spot TESTNET
+Set in `.env`:
+- `BROKER=binance_testnet`
+- `BINANCE_API_KEY=...`
+- `BINANCE_API_SECRET=...`
+Use testnet funds only (https://testnet.binance.vision). For real trading keep `BROKER=paper`.
