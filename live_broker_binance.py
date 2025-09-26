@@ -1,10 +1,9 @@
 import ccxt
 
-
 class BinanceBroker:
-    """Market-order broker for Binance Spot (testnet or live)."""
-
-    def __init__(self, api_key: str, api_secret: str, symbol: str, fee: float = 0.0005, testnet: bool = True):
+    """Market-order broker for Binance Spot (testnet alebo live)."""
+    def __init__(self, api_key: str, api_secret: str, symbol: str,
+                 fee: float = 0.0005, testnet: bool = True):
         self.symbol = symbol
         self.fee = float(fee)
         self.trades = []
@@ -13,18 +12,25 @@ class BinanceBroker:
             "apiKey": api_key,
             "secret": api_secret,
             "enableRateLimit": True,
-            "options": {"defaultType": "spot"},
+            "timeout": 20000,
+            "options": {
+                "defaultType": "spot",
+                "adjustForTimeDifference": True,  # dôležité
+                "recvWindow": 20000,
+            },
         })
+
         if testnet:
             try:
                 self.exchange.set_sandbox_mode(True)
             except Exception:
                 pass
-            try:
-                self.exchange.urls["api"]["public"] = "https://testnet.binance.vision/api"
-                self.exchange.urls["api"]["private"] = "https://testnet.binance.vision/api"
-            except Exception:
-                pass
+
+        # zosúladenie časového posunu klient vs. burza
+        try:
+            self.exchange.load_time_difference()
+        except Exception:
+            pass
 
         self.exchange.load_markets()
         m = self.exchange.market(self.symbol)
@@ -44,32 +50,30 @@ class BinanceBroker:
 
     def buy_all(self, price: float, ts) -> None:
         usdt = self.quote_cash()
-        if usdt <= 0:
-            return
+        if usdt <= 0: return
         amt = self._amt_from_usd(usdt, price)
-        if amt <= 0:
-            return
+        if amt <= 0: return
         order = self.exchange.create_market_buy_order(self.symbol, amt)
-        self.trades.append({"ts": ts, "side": "BUY", "price": float(price), "qty": float(amt), "orderId": order.get("id")})
+        self.trades.append({"ts": ts, "side": "BUY", "price": float(price),
+                            "qty": float(amt), "orderId": order.get("id")})
 
     def buy_fraction(self, price: float, ts, fraction: float) -> None:
         usdt = self.quote_cash()
-        if usdt <= 0:
-            return
+        if usdt <= 0: return
         spend = usdt * max(0.0, min(1.0, float(fraction)))
         amt = self._amt_from_usd(spend, price)
-        if amt <= 0:
-            return
+        if amt <= 0: return
         order = self.exchange.create_market_buy_order(self.symbol, amt)
-        self.trades.append({"ts": ts, "side": "BUY", "price": float(price), "qty": float(amt), "orderId": order.get("id")})
+        self.trades.append({"ts": ts, "side": "BUY", "price": float(price),
+                            "qty": float(amt), "orderId": order.get("id")})
 
     def sell_all(self, price: float, ts) -> None:
         qty = float(self._free(self.base))
         qty = float(self.exchange.amount_to_precision(self.symbol, qty))
-        if qty <= 0:
-            return
+        if qty <= 0: return
         order = self.exchange.create_market_sell_order(self.symbol, qty)
-        self.trades.append({"ts": ts, "side": "SELL", "price": float(price), "qty": float(qty), "orderId": order.get("id")})
+        self.trades.append({"ts": ts, "side": "SELL", "price": float(price),
+                            "qty": float(qty), "orderId": order.get("id")})
 
     def equity(self, price: float) -> float:
         usd = self.quote_cash()
