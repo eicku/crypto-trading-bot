@@ -21,3 +21,9 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 HYSTERESIS_PCT = float(os.getenv("HYSTERESIS_PCT", "0.0"))
 COOLDOWN_BARS = int(os.getenv("COOLDOWN_BARS", "0"))
+STRATEGY = os.getenv("STRATEGY", "SMA")  # options: SMA, EMA_RSI
+EMA_FAST = int(os.getenv("EMA_FAST", "12"))
+EMA_SLOW = int(os.getenv("EMA_SLOW", "26"))
+RSI_PERIOD = int(os.getenv("RSI_PERIOD", "14"))
+RSI_LONG = int(os.getenv("RSI_LONG", "55"))
+RSI_EXIT = int(os.getenv("RSI_EXIT", "45"))
