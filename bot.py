@@ -1,63 +1,79 @@
 import argparse
+import logging
 import pandas as pd
 from data import fetch_ohlcv
 from strategy import sma_crossover
 from paper_broker import PaperBroker
+import config as cfg
 
-def run(symbol="BTC/USDT", timeframe="5m", limit=500, fast=20, slow=50, start_usd=1000.0, exchange="binance"):
+logging.basicConfig(level=getattr(logging, cfg.LOG_LEVEL.upper(), logging.INFO),
+                    format="%(asctime)s %(levelname)s %(message)s")
+
+def run(symbol=None, timeframe=None, limit=None, fast=None, slow=None, start_usd=None, exchange=None):
+    symbol = symbol or cfg.SYMBOL
+    timeframe = timeframe or cfg.TIMEFRAME
+    limit = limit or cfg.LIMIT
+    fast = fast or cfg.FAST
+    slow = slow or cfg.SLOW
+    start_usd = start_usd or cfg.START_USD
+    exchange = exchange or cfg.EXCHANGE_NAME
+
+    logging.info(f"Start run: {symbol} {timeframe} fast={fast} slow={slow} start_usd={start_usd}")
     df = fetch_ohlcv(symbol, timeframe, limit, exchange)
     df = sma_crossover(df, fast, slow)
     broker = PaperBroker(starting_usd=start_usd)
 
     prev = 0
-    equity_points = []
+    entry_price = None
     for _, row in df.iterrows():
         sig = int(row["signal"])
+        price = float(row["close"])
         if pd.isna(row.get("sma_fast")) or pd.isna(row.get("sma_slow")):
-            equity_points.append((row["ts"], broker.equity(row["close"])))
             continue
-        if sig == 1 and prev <= 0:
-            broker.buy_all(row["close"], row["ts"])
-        elif sig == -1 and prev >= 0:
-            broker.sell_all(row["close"], row["ts"])
+
+        if broker.asset > 0 and entry_price:
+            if cfg.STOP_LOSS_PCT > 0 and price <= entry_price * (1 - cfg.STOP_LOSS_PCT):
+                broker.sell_all(price, row["ts"])
+                logging.info(f"STOP LOSS at {price:.2f}")
+                prev = -1
+                entry_price = None
+                continue
+            if cfg.TAKE_PROFIT_PCT > 0 and price >= entry_price * (1 + cfg.TAKE_PROFIT_PCT):
+                broker.sell_all(price, row["ts"])
+                logging.info(f"TAKE PROFIT at {price:.2f}")
+                prev = -1
+                entry_price = None
+                continue
+
+        if sig == 1 and prev <= 0 and broker.usd > 0:
+            broker.buy_all(price, row["ts"])
+            entry_price = price
+            logging.info(f"BUY at {price:.2f}")
+        elif sig == -1 and prev >= 0 and broker.asset > 0:
+            broker.sell_all(price, row["ts"])
+            logging.info(f"SELL at {price:.2f}")
+            entry_price = None
         prev = sig
-        equity_points.append((row["ts"], broker.equity(row["close"])))
 
     last_price = float(df["close"].iloc[-1])
     final_equity = broker.equity(last_price)
-
     trades = pd.DataFrame(broker.trades)
     if not trades.empty:
         trades.to_csv("trades.csv", index=False)
-
-    equity_curve = pd.Series(
-        [v for _, v in equity_points],
-        index=[t for t, _ in equity_points],
-        name="equity"
-    )
-
-    print(f"[{symbol} {timeframe}] Final equity: {final_equity:.2f} USD | Trades: {len(broker.trades)}")
-    return final_equity, trades if not trades.empty else pd.DataFrame(), equity_curve
+    logging.info(f"Final equity: {final_equity:.2f} USD | Trades: {len(broker.trades)}")
+    return final_equity, trades, None
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Paper-trading SMA bot")
-    p.add_argument("--symbol", default="BTC/USDT")
-    p.add_argument("--timeframe", default="5m")
-    p.add_argument("--limit", type=int, default=500)
-    p.add_argument("--fast", type=int, default=20)
-    p.add_argument("--slow", type=int, default=50)
-    p.add_argument("--start-usd", type=float, default=1000.0)
-    p.add_argument("--exchange", default="binance")
+    p = argparse.ArgumentParser(description="Paper-trading SMA bot with .env defaults")
+    p.add_argument("--symbol")
+    p.add_argument("--timeframe")
+    p.add_argument("--limit", type=int)
+    p.add_argument("--fast", type=int)
+    p.add_argument("--slow", type=int)
+    p.add_argument("--start-usd", type=float)
+    p.add_argument("--exchange")
     return p.parse_args()
 
 if __name__ == "__main__":
-    args = parse_args()
-    run(
-        symbol=args.symbol,
-        timeframe=args.timeframe,
-        limit=args.limit,
-        fast=args.fast,
-        slow=args.slow,
-        start_usd=args.start_usd,
-        exchange=args.exchange,
-    )
+    a = parse_args()
+    run(a.symbol, a.timeframe, a.limit, a.fast, a.slow, a.start_usd, a.exchange)
