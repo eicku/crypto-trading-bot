@@ -1,3 +1,4 @@
+
 from typing import Optional
 
 def hello() -> None:
@@ -11,3 +12,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+ main
