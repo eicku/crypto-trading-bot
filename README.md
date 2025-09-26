@@ -24,3 +24,10 @@ Run:
 `python bot.py`
 
 Trades (if any) will be saved to `trades.csv`.
+
+## CLI
+Run with custom params:
+`python bot.py --symbol ETH/USDT --timeframe 15m --fast 10 --slow 30 --start-usd 1500`
+
+Backtest summary:
+`python backtest.py`
