@@ -33,3 +33,5 @@ TRAILING_STOP_PCT = float(os.getenv("TRAILING_STOP_PCT", "0.0"))
 CLOSE_AT_END = os.getenv("CLOSE_AT_END", "0").lower() in ("1","true","yes")
 
 BROKER = os.getenv("BROKER", "paper").lower()
+MAX_ALLOC_PCT = float(os.getenv("MAX_ALLOC_PCT", "0.25"))
+MAX_TRADE_USD = float(os.getenv("MAX_TRADE_USD", "50"))

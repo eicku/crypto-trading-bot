@@ -1,7 +1,7 @@
 import argparse, logging, pandas as pd
 from data import fetch_ohlcv
-from paper_broker import PaperBroker
 import config as cfg
+from paper_broker import PaperBroker
 
 logging.basicConfig(level=getattr(logging, cfg.LOG_LEVEL.upper(), logging.INFO),
                     format="%(asctime)s %(levelname)s %(message)s")
@@ -36,19 +36,45 @@ def run(symbol=None, timeframe=None, limit=None, fast=None, slow=None, start_usd
         )
     broker = PaperBroker(starting_usd=start_usd)
     try:
-        if getattr(cfg, "BROKER", "paper").lower() == "binance_testnet":
-            from live_broker_binance import BinanceTestnetBroker
+        if getattr(cfg, "BROKER", "paper") in ("binance_testnet", "binance_live"):
+            from live_broker_binance import BinanceBroker
 
-            broker = BinanceTestnetBroker(
+            use_testnet = (cfg.BROKER == "binance_testnet")
+            broker = BinanceBroker(
                 api_key=getattr(cfg, "BINANCE_API_KEY", ""),
                 api_secret=getattr(cfg, "BINANCE_API_SECRET", ""),
                 symbol=symbol,
                 fee=0.0005,
-                testnet=True,
+                testnet=use_testnet,
             )
-            logging.info("Using BINANCE SPOT TESTNET broker")
+            logging.info(f"Using Binance broker (testnet={use_testnet})")
     except Exception as e:
         logging.warning(f"Falling back to PaperBroker: {e}")
+
+    def current_asset_qty() -> float:
+        asset_val = getattr(broker, "asset", None)
+        if asset_val is not None:
+            try:
+                return float(asset_val)
+            except Exception:
+                return 0.0
+        free_fn = getattr(broker, "_free", None)
+        base_code = getattr(broker, "base", None)
+        if callable(free_fn) and base_code:
+            try:
+                return float(free_fn(base_code))
+            except Exception:
+                return 0.0
+        return 0.0
+
+    def available_cash() -> float:
+        getter = getattr(broker, "quote_cash", None)
+        try:
+            if callable(getter):
+                return float(getter())
+        except Exception:
+            return 0.0
+        return float(getattr(broker, "usd", 0.0))
 
     prev = 0
     entry_price = None
@@ -63,7 +89,9 @@ def run(symbol=None, timeframe=None, limit=None, fast=None, slow=None, start_usd
         price = float(row["close"])
         sig = int(row["signal"])
 
-        if broker.asset > 0:
+        asset_qty = current_asset_qty()
+
+        if asset_qty > 0:
             high_since_entry = max(high_since_entry or price, price)
 
         if wait > 0:
@@ -72,7 +100,7 @@ def run(symbol=None, timeframe=None, limit=None, fast=None, slow=None, start_usd
 
         # Trailing stop: exit if price falls X% from the highest price since entry
         ts_pct = float(getattr(cfg, "TRAILING_STOP_PCT", 0.0) or 0.0)
-        if broker.asset > 0 and high_since_entry and ts_pct > 0:
+        if asset_qty > 0 and high_since_entry and ts_pct > 0:
             if price <= high_since_entry * (1 - ts_pct):
                 broker.sell_all(price, row["ts"])
                 logging.info(
@@ -85,7 +113,7 @@ def run(symbol=None, timeframe=None, limit=None, fast=None, slow=None, start_usd
                 continue
 
         # optional SL/TP
-        if broker.asset > 0 and entry_price:
+        if asset_qty > 0 and entry_price:
             if cfg.STOP_LOSS_PCT > 0 and price <= entry_price * (1 - cfg.STOP_LOSS_PCT):
                 broker.sell_all(price, row["ts"])
                 logging.info(f"STOP LOSS at {price:.2f}")
@@ -103,14 +131,21 @@ def run(symbol=None, timeframe=None, limit=None, fast=None, slow=None, start_usd
                 wait = cooldown
                 continue
 
-        if sig == 1 and prev <= 0 and broker.usd > 0:
-            broker.buy_all(price, row["ts"])
-            entry_price = price
-            high_since_entry = price
-            logging.info(f"BUY at {price:.2f}")
-            prev = 1
-            wait = cooldown
-        elif sig == -1 and prev >= 0 and broker.asset > 0:
+        cash = available_cash()
+        if sig == 1 and prev <= 0 and cash > 0:
+            frac_by_pct = max(0.0, min(1.0, float(getattr(cfg, "MAX_ALLOC_PCT", 0.25))))
+            frac_by_usd = 1.0
+            if cash > 0 and getattr(cfg, "MAX_TRADE_USD", 0.0) > 0:
+                frac_by_usd = float(cfg.MAX_TRADE_USD) / cash
+            alloc = max(0.0, min(frac_by_pct, frac_by_usd))
+            if alloc > 0:
+                broker.buy_fraction(price, row["ts"], alloc)
+                entry_price = price
+                high_since_entry = price
+                logging.info(f"BUY {alloc*100:.1f}% at {price:.2f}")
+                prev = 1
+                wait = cooldown
+        elif sig == -1 and prev >= 0 and asset_qty > 0:
             broker.sell_all(price, row["ts"])
             logging.info(f"SELL at {price:.2f}")
             entry_price = None
@@ -121,7 +156,7 @@ def run(symbol=None, timeframe=None, limit=None, fast=None, slow=None, start_usd
     last_price = float(df["close"].iloc[-1])
     # optionally close any open position at last bar
     last_ts = df["ts"].iloc[-1]
-    if getattr(cfg, "CLOSE_AT_END", False) and broker.asset > 0:
+    if getattr(cfg, "CLOSE_AT_END", False) and current_asset_qty() > 0:
         broker.sell_all(last_price, last_ts)
         logging.info(f"EOD CLOSE at {last_price:.2f}")
 
