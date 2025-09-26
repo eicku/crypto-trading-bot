@@ -28,6 +28,9 @@ class PaperBroker:
         self.trades.append({"ts": ts, "side": "BUY", "price": float(price), "qty": float(qty)})
         self.usd -= spend
 
+    def quote_cash(self) -> float:
+        return float(self.usd)
+
     def sell_all(self, price: float, ts) -> None:
         if self.asset <= 0 or price <= 0:
             return
