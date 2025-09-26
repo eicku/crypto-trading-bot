@@ -38,3 +38,7 @@ Run a multi-symbol scan and generate `scan_results.csv` + `report.md`:
 
 ## Config via .env
 Copy `.env.example` to `.env` and adjust values. CLI args override .env defaults.
+
+## Noise filters
+- `HYSTERESIS_PCT` (e.g., 0.001 = 0.1%) avoids rapid flip-flops.
+- `COOLDOWN_BARS` waits N candles after each trade.
