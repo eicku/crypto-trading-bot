@@ -18,3 +18,6 @@ STOP_LOSS_PCT = float(os.getenv("STOP_LOSS_PCT", "0.0"))
 TAKE_PROFIT_PCT = float(os.getenv("TAKE_PROFIT_PCT", "0.0"))
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+
+HYSTERESIS_PCT = float(os.getenv("HYSTERESIS_PCT", "0.0"))
+COOLDOWN_BARS = int(os.getenv("COOLDOWN_BARS", "0"))
