@@ -42,3 +42,7 @@ Copy `.env.example` to `.env` and adjust values. CLI args override .env defaults
 ## Noise filters
 - `HYSTERESIS_PCT` (e.g., 0.001 = 0.1%) avoids rapid flip-flops.
 - `COOLDOWN_BARS` waits N candles after each trade.
+
+## Strategy switch
+- `STRATEGY=SMA` (default) uses SMA crossover (+ optional hysteresis/cooldown).
+- `STRATEGY=EMA_RSI` uses EMA(12/26) trend + RSI filter (enter when RSI ≥ RSI_LONG, exit when RSI ≤ RSI_EXIT or trend flips).

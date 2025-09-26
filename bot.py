@@ -1,6 +1,5 @@
 import argparse, logging, pandas as pd
 from data import fetch_ohlcv
-from strategy import sma_crossover
 from paper_broker import PaperBroker
 import config as cfg
 
@@ -18,7 +17,23 @@ def run(symbol=None, timeframe=None, limit=None, fast=None, slow=None, start_usd
 
     logging.info(f"Start run: {symbol} {timeframe} fast={fast} slow={slow} start_usd={start_usd}")
     df = fetch_ohlcv(symbol, timeframe, limit, exchange)
-    df = sma_crossover(df, fast, slow, hysteresis_pct=getattr(cfg, "HYSTERESIS_PCT", 0.0))
+    if getattr(cfg, "STRATEGY", "SMA").upper() == "EMA_RSI":
+        from strategy import ema_rsi
+
+        df = ema_rsi(
+            df,
+            fast=getattr(cfg, "EMA_FAST", 12),
+            slow=getattr(cfg, "EMA_SLOW", 26),
+            rsi_period=getattr(cfg, "RSI_PERIOD", 14),
+            rsi_long=getattr(cfg, "RSI_LONG", 55),
+            rsi_exit=getattr(cfg, "RSI_EXIT", 45),
+        )
+    else:
+        from strategy import sma_crossover
+
+        df = sma_crossover(
+            df, fast, slow, hysteresis_pct=getattr(cfg, "HYSTERESIS_PCT", 0.0)
+        )
     broker = PaperBroker(starting_usd=start_usd)
 
     prev = 0
