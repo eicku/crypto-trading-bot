@@ -46,9 +46,10 @@ def run(symbol=None, timeframe=None, limit=None, fast=None, slow=None, start_usd
                 continue
 
         if sig == 1 and prev <= 0 and broker.usd > 0:
-            broker.buy_all(price, row["ts"])
+            alloc = 0.5  # use 50% of available cash per entry
+            broker.buy_fraction(price, row["ts"], alloc)
             entry_price = price
-            logging.info(f"BUY at {price:.2f}")
+            logging.info(f"BUY {alloc*100:.0f}% at {price:.2f}")
         elif sig == -1 and prev >= 0 and broker.asset > 0:
             broker.sell_all(price, row["ts"])
             logging.info(f"SELL at {price:.2f}")

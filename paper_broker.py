@@ -18,6 +18,16 @@ class PaperBroker:
         self.trades.append({"ts": ts, "side": "BUY", "price": float(price), "qty": float(qty)})
         self.usd = 0.0
 
+    def buy_fraction(self, price: float, ts, fraction: float) -> None:
+        if self.usd <= 0 or price <= 0 or fraction <= 0:
+            return
+        frac = min(max(fraction, 0.0), 1.0)
+        spend = self.usd * frac
+        qty = (spend * (1 - self.fee)) / price
+        self.asset += qty
+        self.trades.append({"ts": ts, "side": "BUY", "price": float(price), "qty": float(qty)})
+        self.usd -= spend
+
     def sell_all(self, price: float, ts) -> None:
         if self.asset <= 0 or price <= 0:
             return
