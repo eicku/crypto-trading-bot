@@ -27,3 +27,5 @@ EMA_SLOW = int(os.getenv("EMA_SLOW", "26"))
 RSI_PERIOD = int(os.getenv("RSI_PERIOD", "14"))
 RSI_LONG = int(os.getenv("RSI_LONG", "55"))
 RSI_EXIT = int(os.getenv("RSI_EXIT", "45"))
+
+TRAILING_STOP_PCT = float(os.getenv("TRAILING_STOP_PCT", "0.0"))

@@ -38,6 +38,7 @@ def run(symbol=None, timeframe=None, limit=None, fast=None, slow=None, start_usd
 
     prev = 0
     entry_price = None
+    high_since_entry = None
     cooldown = int(getattr(cfg, "COOLDOWN_BARS", 0))
 
     wait = 0
@@ -48,9 +49,26 @@ def run(symbol=None, timeframe=None, limit=None, fast=None, slow=None, start_usd
         price = float(row["close"])
         sig = int(row["signal"])
 
+        if broker.asset > 0:
+            high_since_entry = max(high_since_entry or price, price)
+
         if wait > 0:
             wait -= 1
             continue
+
+        # Trailing stop: exit if price falls X% from the highest price since entry
+        ts_pct = float(getattr(cfg, "TRAILING_STOP_PCT", 0.0) or 0.0)
+        if broker.asset > 0 and high_since_entry and ts_pct > 0:
+            if price <= high_since_entry * (1 - ts_pct):
+                broker.sell_all(price, row["ts"])
+                logging.info(
+                    f"TRAIL STOP at {price:.2f} (peak {high_since_entry:.2f}, drop {ts_pct*100:.2f}%)"
+                )
+                prev = -1
+                entry_price = None
+                high_since_entry = None
+                wait = cooldown
+                continue
 
         # optional SL/TP
         if broker.asset > 0 and entry_price:
@@ -59,6 +77,7 @@ def run(symbol=None, timeframe=None, limit=None, fast=None, slow=None, start_usd
                 logging.info(f"STOP LOSS at {price:.2f}")
                 prev = -1
                 entry_price = None
+                high_since_entry = None
                 wait = cooldown
                 continue
             if cfg.TAKE_PROFIT_PCT > 0 and price >= entry_price * (1 + cfg.TAKE_PROFIT_PCT):
@@ -66,12 +85,14 @@ def run(symbol=None, timeframe=None, limit=None, fast=None, slow=None, start_usd
                 logging.info(f"TAKE PROFIT at {price:.2f}")
                 prev = -1
                 entry_price = None
+                high_since_entry = None
                 wait = cooldown
                 continue
 
         if sig == 1 and prev <= 0 and broker.usd > 0:
             broker.buy_all(price, row["ts"])
             entry_price = price
+            high_since_entry = price
             logging.info(f"BUY at {price:.2f}")
             prev = 1
             wait = cooldown
@@ -79,6 +100,7 @@ def run(symbol=None, timeframe=None, limit=None, fast=None, slow=None, start_usd
             broker.sell_all(price, row["ts"])
             logging.info(f"SELL at {price:.2f}")
             entry_price = None
+            high_since_entry = None
             prev = -1
             wait = cooldown
 

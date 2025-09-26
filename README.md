@@ -46,3 +46,8 @@ Copy `.env.example` to `.env` and adjust values. CLI args override .env defaults
 ## Strategy switch
 - `STRATEGY=SMA` (default) uses SMA crossover (+ optional hysteresis/cooldown).
 - `STRATEGY=EMA_RSI` uses EMA(12/26) trend + RSI filter (enter when RSI ≥ RSI_LONG, exit when RSI ≤ RSI_EXIT or trend flips).
+
+vbnet
+Kopírovať kód
+## Trailing stop
+Set `TRAILING_STOP_PCT` (e.g., 0.02 = 2%). While in a position the bot tracks the highest price since entry and exits when price drops by that percentage from the peak.
