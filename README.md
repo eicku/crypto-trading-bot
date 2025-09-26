@@ -64,3 +64,10 @@ Set in `.env`:
 - `BINANCE_API_KEY=...`
 - `BINANCE_API_SECRET=...`
 Use testnet funds only (https://testnet.binance.vision). For real trading keep `BROKER=paper`.
+
+markdown
+Kopírovať kód
+## Parameter tuning
+Run a simple grid search for EMA/RSI:
+`python tune.py --symbol ETH/USDT --timeframe 5m`
+Results: `tune_results.csv` and `tune_best.md`.
